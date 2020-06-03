@@ -1,0 +1,3 @@
+-- TODO RGS: These should only be temporary
+jobs:                 2
+install-dependencies: False

@@ -40,10 +40,10 @@ type DSubst = M.Map Name DType
 
 -- | Capture-avoiding substitution on types
 substTy :: Quasi q => DSubst -> DType -> q DType
-substTy vars (DForallT fvf tvbs ty) =
-  substTyVarBndrs vars tvbs $ \vars' tvbs' -> do
+substTy vars (DForallT tele ty) =
+  substForallTelescope vars tele $ \vars' tele' -> do
     ty' <- substTy vars' ty
-    return $ DForallT fvf tvbs' ty'
+    return $ DForallT tele' ty'
 substTy vars (DConstrainedT cxt ty) =
   DConstrainedT <$> mapM (substTy vars) cxt <*> substTy vars ty
 substTy vars (DAppT t1 t2) =
@@ -62,22 +62,32 @@ substTy _ ty@DArrowT    = return ty
 substTy _ ty@(DLitT _)  = return ty
 substTy _ ty@DWildCardT = return ty
 
-substTyVarBndrs :: Quasi q => DSubst -> [DTyVarBndr]
-                -> (DSubst -> [DTyVarBndr] -> q a)
+substForallTelescope :: Quasi q => DSubst -> DForallTelescope
+                     -> (DSubst -> DForallTelescope -> q a)
+                     -> q a
+substForallTelescope vars tele thing =
+  case tele of
+    DForallVis   tvbs -> substTyVarBndrs vars tvbs $ \vars' tvbs' ->
+      thing vars' $ DForallVis tvbs'
+    DForallInvis tvbs -> substTyVarBndrs vars tvbs $ \vars' tvbs' ->
+      thing vars' $ DForallInvis tvbs'
+
+substTyVarBndrs :: Quasi q => DSubst -> [DTyVarBndr flag]
+                -> (DSubst -> [DTyVarBndr flag] -> q a)
                 -> q a
 substTyVarBndrs vars tvbs thing = do
   (vars', tvbs') <- mapAccumLM substTvb vars tvbs
   thing vars' tvbs'
 
-substTvb :: Quasi q => DSubst -> DTyVarBndr
-         -> q (DSubst, DTyVarBndr)
-substTvb vars (DPlainTV n) = do
+substTvb :: Quasi q => DSubst -> DTyVarBndr flag
+         -> q (DSubst, DTyVarBndr flag)
+substTvb vars (DPlainTV n flag) = do
   new_n <- qNewName (nameBase n)
-  return (M.insert n (DVarT new_n) vars, DPlainTV new_n)
-substTvb vars (DKindedTV n k) = do
+  return (M.insert n (DVarT new_n) vars, DPlainTV new_n flag)
+substTvb vars (DKindedTV n flag k) = do
   new_n <- qNewName (nameBase n)
   k' <- substTy vars k
-  return (M.insert n (DVarT new_n) vars, DKindedTV new_n k')
+  return (M.insert n (DVarT new_n) vars, DKindedTV new_n flag k')
 
 -- | Computes the union of two substitutions. Fails if both subsitutions map
 -- the same variable to different types.
