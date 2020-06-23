@@ -1181,6 +1181,9 @@ dsType (ImplicitParamT n t) = do
 dsType (ForallVisT tvbs ty) =
   DForallT <$> (DForallVis <$> mapM dsTvbUnit tvbs) <*> dsType ty
 #endif
+#if __GLASGOW_HASKELL__ >= 811
+dsType MulArrowT = return DMulArrowT
+#endif
 
 #if __GLASGOW_HASKELL__ >= 811
 -- | Desugar a 'TyVarBndr'.
@@ -1319,6 +1322,10 @@ dsPred (ImplicitParamT n t) = do
 #if __GLASGOW_HASKELL__ >= 809
 dsPred t@(ForallVisT {}) =
   impossible $ "Visible dependent quantifier seen as head of constraint: " ++ show t
+#endif
+#if __GLASGOW_HASKELL__ >= 811
+dsPred MulArrowT =
+  impossible "Linear function arrow seen as head of constraint."
 #endif
 
 -- | Desugar a quantified constraint.
@@ -1535,6 +1542,7 @@ toposortTyVarsOf tys =
           go_ty (DVarT {}) = mempty
           go_ty (DConT {}) = mempty
           go_ty DArrowT    = mempty
+          go_ty DMulArrowT = mempty
           go_ty (DLitT {}) = mempty
           go_ty DWildCardT = mempty
 

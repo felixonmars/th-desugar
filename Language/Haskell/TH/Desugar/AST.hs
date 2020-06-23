@@ -51,6 +51,7 @@ data DType = DForallT DForallTelescope DType
            | DVarT Name
            | DConT Name
            | DArrowT
+           | DMulArrowT
            | DLitT TyLit
            | DWildCardT
            deriving (Eq, Show, Typeable, Data, Generic)

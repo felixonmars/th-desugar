@@ -450,6 +450,11 @@ typeToTH (DAppKindT t k)        = AppKindT (typeToTH t) (typeToTH k)
 -- kind applications, we will simply drop the applied kind.
 typeToTH (DAppKindT t _)        = typeToTH t
 #endif
+#if __GLASGOW_HASKELL__ >= 811
+typeToTH DMulArrowT             = MulArrowT
+#else
+typeToTH DMulArrowT             = error "Linear types supposed only in GHC 8.12+"
+#endif
 
 tvbToTH :: DTyVarBndr flag -> TyVarBndr_ flag
 tvbToTH (DPlainTV n flag)    = plainTVFlag n flag
@@ -546,6 +551,11 @@ predToTH (DAppKindT p k) = AppKindT (predToTH p) (typeToTH k)
 -- In the event that we're on a version of Template Haskell without support for
 -- kind applications, we will simply drop the applied kind.
 predToTH (DAppKindT p _) = predToTH p
+#endif
+#if __GLASGOW_HASKELL__ >= 811
+predToTH DMulArrowT = MulArrowT
+#else
+predToTH DMulArrowT = error "Linear types supposed only in GHC 8.12+"
 #endif
 #endif
 

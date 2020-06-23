@@ -59,6 +59,7 @@ substTy vars (DVarT n)
   = return $ DVarT n
 substTy _ ty@(DConT _)  = return ty
 substTy _ ty@DArrowT    = return ty
+substTy _ ty@DMulArrowT = return ty
 substTy _ ty@(DLitT _)  = return ty
 substTy _ ty@DWildCardT = return ty
 

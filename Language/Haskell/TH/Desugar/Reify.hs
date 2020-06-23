@@ -51,6 +51,11 @@ import Data.Maybe
 import qualified Data.Set as Set
 import Data.Set (Set)
 
+-- TODO RGS: Perhaps we can backport this to avoid CPP
+#if __GLASGOW_HASKELL__ >= 811
+import GHC.Types (Multiplicity(..))
+#endif
+
 import Language.Haskell.TH.Datatype
 import Language.Haskell.TH.Datatype.TyVarBndr
 import Language.Haskell.TH.Instances ()
@@ -428,13 +433,13 @@ con_to_type h98_tvbs h98_result_ty con =
                   | otherwise -> maybeForallT h98_tvbs [] ty
   where
     go :: Con -> (Bool, Type) -- The Bool is True when dealing with a GADT
-    go (NormalC _ stys)       = (False, mkArrows (map snd    stys)  h98_result_ty)
-    go (RecC _ vstys)         = (False, mkArrows (map thdOf3 vstys) h98_result_ty)
-    go (InfixC t1 _ t2)       = (False, mkArrows (map snd [t1, t2]) h98_result_ty)
+    go (NormalC _ stys)       = (False, mkLinearArrows (map snd    stys)  h98_result_ty)
+    go (RecC _ vstys)         = (False, mkLinearArrows (map thdOf3 vstys) h98_result_ty)
+    go (InfixC t1 _ t2)       = (False, mkLinearArrows (map snd [t1, t2]) h98_result_ty)
     go (ForallC bndrs cxt c)  = liftSnd (ForallT bndrs cxt) (go c)
 #if __GLASGOW_HASKELL__ > 710
-    go (GadtC _ stys rty)     = (True, mkArrows (map snd    stys)  rty)
-    go (RecGadtC _ vstys rty) = (True, mkArrows (map thdOf3 vstys) rty)
+    go (GadtC _ stys rty)     = (True, mkArrows        (map snd    stys)  rty)
+    go (RecGadtC _ vstys rty) = (True, mkLinearArrows (map thdOf3 vstys) rty)
 #endif
 
 mkVarI :: Name -> [Dec] -> Info
@@ -685,8 +690,16 @@ stripInstanceDec (InstanceD cxt ty _)      = InstanceD cxt ty []
 stripInstanceDec dec                       = dec
 
 mkArrows :: [Type] -> Type -> Type
-mkArrows []     res_ty = res_ty
-mkArrows (t:ts) res_ty = AppT (AppT ArrowT t) $ mkArrows ts res_ty
+mkArrows ts res_ty = foldr (\arg res -> ArrowT `AppT` arg `AppT` res) res_ty ts
+
+mkLinearArrows :: [Type] -> Type -> Type
+#if __GLASGOW_HASKELL__ >= 811
+mkLinearArrows ts res_ty =
+  foldr (\arg res -> MulArrowT `AppT` PromotedT 'One `AppT` arg `AppT` res)
+        res_ty ts
+#else
+mkLinearArrows = mkArrows
+#endif
 
 maybeForallT :: [TyVarBndrUnit] -> Cxt -> Type -> Type
 maybeForallT tvbs cxt ty

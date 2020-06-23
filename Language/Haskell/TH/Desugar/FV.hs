@@ -35,6 +35,7 @@ fvDType = go
     go (DVarT n)               = OS.singleton n
     go (DConT {})              = OS.empty
     go DArrowT                 = OS.empty
+    go DMulArrowT              = OS.empty
     go (DLitT {})              = OS.empty
     go DWildCardT              = OS.empty
 

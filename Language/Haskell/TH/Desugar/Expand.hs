@@ -82,6 +82,7 @@ expand_type ign = go []
     go args (DConT n) = expand_con ign n args
     go args ty@(DVarT _)  = finish ty args
     go args ty@DArrowT    = finish ty args
+    go args ty@DMulArrowT = finish ty args
     go args ty@(DLitT _)  = finish ty args
     go args ty@DWildCardT = finish ty args
 
@@ -211,6 +212,7 @@ expand_con ign n args = do
         -- Default to True
         go_ty DLitT{}    = return True
         go_ty DArrowT    = return True
+        go_ty DMulArrowT = return True
         go_ty DWildCardT = return True
 
         -- These cases are uninteresting
